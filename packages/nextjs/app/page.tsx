@@ -79,11 +79,6 @@ const Home: NextPage = () => {
 
   return (
     <>
-      <Head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        <link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap" rel="stylesheet" />
-      </Head>
       <div className="min-h-screen w-screen relative overflow-hidden bg-black">
         <div className="absolute top-0 left-0 p-4 text-white rubik-glitch-regular" style={{ zIndex: 10 }}>
           <p style={{ fontSize: "6rem" }}>{name?.toString()}</p>
