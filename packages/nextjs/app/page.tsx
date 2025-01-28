@@ -1,68 +1,117 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import Head from "next/head";
+import Image from "next/image";
 import type { NextPage } from "next";
-import { useAccount } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { Address } from "~~/components/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
+  const [currentImage, setCurrentImage] = useState<string>("");
+  const [nextImage, setNextImage] = useState<string>("");
+  const [bgImage, setBgImage] = useState<string>("");
+  const [imageList, setImageList] = useState<string[]>([]);
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  const { data: contractSeed } = useScaffoldReadContract({
+    contractName: "YourContract",
+    functionName: "getSeed",
+  });
+
+  const { data: name } = useScaffoldReadContract({
+    contractName: "YourContract",
+    functionName: "name",
+  });
+
+  const { data: blockNumber } = useScaffoldReadContract({
+    contractName: "YourContract",
+    functionName: "blockNumber",
+  });
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        const response = await fetch("/api/images");
+        const data = await response.json();
+        setImageList(data.images);
+
+        const seed = Number(contractSeed) || 0;
+        const initialIndex = Math.abs(seed) % data.images.length;
+        const secondIndex = Math.abs(seed + 1) % data.images.length;
+        const thirdIndex = Math.abs(seed + 2) % data.images.length;
+
+        setCurrentImage(data.images[initialIndex]);
+        setNextImage(data.images[secondIndex]);
+        setBgImage(data.images[thirdIndex]);
+      } catch (error) {
+        console.error("Error fetching images:", error);
+      }
+    };
+
+    fetchImages();
+  }, [contractSeed]);
+
+  useEffect(() => {
+    if (imageList.length === 0) return;
+
+    const newSeed = Number(contractSeed) || 0;
+    const nextIndex = Math.abs(newSeed) % imageList.length;
+    const nextImageUrl = imageList[nextIndex];
+
+    if (nextImageUrl === currentImage) return;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    setNextImage(nextImageUrl);
+
+    timeoutRef.current = setTimeout(() => {
+      setCurrentImage(nextImageUrl);
+    }, 30);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [imageList, contractSeed, currentImage]);
 
   return (
     <>
-      <div className="flex items-center flex-col flex-grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-          </h1>
-          <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address address={connectedAddress} />
-          </div>
-
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/app/page.tsx
-            </code>
-          </p>
-          <p className="text-center text-lg">
-            Edit your smart contract{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
-            </code>
-          </p>
+      <Head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+        <link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap" rel="stylesheet" />
+      </Head>
+      <div className="min-h-screen w-screen relative overflow-hidden bg-black">
+        <div className="absolute top-0 left-0 p-4 text-white rubik-glitch-regular" style={{ zIndex: 10 }}>
+          <p style={{ fontSize: "6rem" }}>{name?.toString()}</p>
+        </div>
+        <div className="absolute bottom-20 left-0 p-4 text-white rubik-glitch-regular" style={{ zIndex: 10 }}>
+          <p style={{ fontSize: "2rem" }}>{blockNumber?.toString()}</p>
         </div>
 
-        <div className="flex-grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-          </div>
+        <div className="absolute inset-0" style={{ zIndex: 1 }}>
+          <Image src={bgImage} alt="Background image" fill className="object-cover" priority />
+        </div>
+        <div
+          className="absolute inset-0"
+          style={{
+            opacity: 1,
+            transition: "opacity 1s ease-in-out",
+          }}
+        >
+          <Image src={currentImage} alt="Current image" fill className="object-cover" priority />
+        </div>
+        <div
+          className="absolute inset-0"
+          style={{
+            opacity: 0,
+            transition: "opacity 1s ease-in-out",
+          }}
+        >
+          <Image src={nextImage} alt="Next image" fill className="object-cover" priority />
         </div>
       </div>
     </>
