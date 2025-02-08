@@ -3,16 +3,15 @@ import fs from "fs";
 import path from "path";
 
 export async function GET() {
-  const publicDir = path.join(process.cwd(), "public", "assets");
+  const imagesDirectory = path.join(process.cwd(), "public/assets");
 
   try {
-    const files = fs.readdirSync(publicDir);
-    const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif|webp)$/i.test(file));
+    const imageFiles = fs.readdirSync(imagesDirectory);
+    const images = imageFiles.filter(file => /\.(jpg|jpeg|png|gif|webp)$/i.test(file)).map(file => `/assets/${file}`);
 
-    const imagePaths = imageFiles.map(file => `/assets/${file}`);
-    return NextResponse.json({ images: imagePaths });
+    return NextResponse.json({ images });
   } catch (error) {
-    console.error("Error reading assets directory:", error);
+    console.error("Error reading images directory:", error);
     return NextResponse.json({ images: [] }, { status: 500 });
   }
 }
